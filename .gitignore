@@ -2,6 +2,13 @@
 node_modules/
 backend/node_modules/
 
+# Build output
+dist/
+
+# Impeccable runtime files (review captures, mocks)
+.impeccable/review/
+.impeccable/mocks/
+
 # Environment variables
 .env
 .env.*

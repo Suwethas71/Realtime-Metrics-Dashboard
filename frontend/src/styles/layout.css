@@ -1,0 +1,347 @@
+.shell {
+  display: grid;
+  grid-template-columns: var(--rail-width) minmax(0, 1fr);
+  min-height: 100dvh;
+}
+
+/* ---------- Rail ---------- */
+.rail {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-6);
+  height: 100dvh;
+  padding: var(--s-5) var(--s-3);
+  border-right: 1px solid var(--border);
+  background: var(--rail);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: 0 var(--s-2);
+}
+
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex: none;
+  border-radius: 9px;
+  background: var(--accent);
+  color: #fff;
+  box-shadow: var(--shadow-sm);
+}
+
+.brand-name {
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.brand-sub {
+  font-size: var(--text-xs);
+  color: var(--text-3);
+}
+
+.nav {
+  display: grid;
+  gap: 2px;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  height: 38px;
+  padding: 0 var(--s-3);
+  border-radius: var(--radius);
+  color: var(--text-2);
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+.nav-link:hover {
+  background: rgb(18 22 32 / 0.05);
+  color: var(--text);
+}
+
+.nav-link.active {
+  background: var(--surface);
+  color: var(--accent);
+  box-shadow: var(--shadow-sm), 0 0 0 1px var(--border);
+}
+
+.health {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  margin-top: auto;
+  padding: var(--s-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.health-dot {
+  width: 9px;
+  height: 9px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--text-3);
+}
+
+.health.online .health-dot {
+  background: var(--active);
+  box-shadow: 0 0 0 3px var(--active-soft);
+}
+
+.health.offline .health-dot {
+  background: var(--critical-mark);
+  box-shadow: 0 0 0 3px var(--critical-soft);
+}
+
+.health-label {
+  font-size: var(--text-sm);
+  font-weight: 650;
+}
+
+.health-host {
+  color: var(--text-3);
+  font-size: var(--text-xs);
+}
+
+/* ---------- Main ---------- */
+.main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3) var(--s-6);
+  padding: var(--s-4) var(--s-8);
+  border-bottom: 1px solid var(--border);
+  background: rgb(244 245 247 / 0.92);
+  backdrop-filter: saturate(1.4) blur(8px);
+}
+
+.topbar-heading h1 {
+  font-size: var(--text-xl);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.topbar-heading p {
+  margin-top: 2px;
+  color: var(--text-3);
+  font-size: var(--text-sm);
+}
+
+.topbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+.content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: var(--s-6);
+  width: 100%;
+  max-width: 1440px;
+  padding: var(--s-6) var(--s-8) var(--s-12);
+}
+
+/* ---------- Live control ---------- */
+.live-control {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.live-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  height: 34px;
+  padding: 0 var(--s-3);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+.live-word {
+  font-weight: 700;
+}
+
+.live-text {
+  min-width: 11ch;
+  color: var(--text-3);
+}
+
+.live-dot {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-3);
+}
+
+.live-pill.live .live-word {
+  color: var(--active);
+}
+
+.live-pill.live .live-dot {
+  background: var(--active);
+}
+
+.live-pill.live .live-dot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--active);
+  animation: live-ping 2s var(--ease-out) infinite;
+}
+
+.live-pill.offline {
+  border-color: #f4c3c5;
+  background: var(--critical-soft);
+}
+
+.live-pill.offline .live-word,
+.live-pill.offline .live-text {
+  color: var(--critical);
+}
+
+.live-pill.offline .live-dot {
+  background: var(--critical-mark);
+}
+
+.live-pill.paused .live-word {
+  color: var(--warning);
+}
+
+.live-pill.paused .live-dot {
+  background: var(--warning-mark);
+}
+
+@keyframes live-ping {
+  0% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  80%,
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 1180px) {
+  .topbar {
+    padding: var(--s-4) var(--s-6);
+  }
+  .content {
+    padding: var(--s-5) var(--s-6) var(--s-10);
+  }
+}
+
+@media (max-width: 900px) {
+  .shell {
+    grid-template-columns: 1fr;
+  }
+
+  .rail {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--s-3);
+    height: auto;
+    padding: var(--s-3) var(--s-4);
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .nav {
+    order: 3;
+    display: flex;
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .nav-link {
+    flex: none;
+    gap: var(--s-2);
+    padding: 0 var(--s-3);
+  }
+
+  .health {
+    margin: 0 0 0 auto;
+    padding: var(--s-2) var(--s-3);
+    border: 0;
+    background: transparent;
+  }
+
+  .health-host {
+    display: none;
+  }
+
+  .topbar {
+    position: static;
+    padding: var(--s-4);
+  }
+
+  .content {
+    padding: var(--s-4) var(--s-4) var(--s-10);
+  }
+}
+
+@media (max-width: 560px) {
+  .live-text {
+    display: none;
+  }
+
+  .nav-link svg {
+    display: none;
+  }
+
+  .topbar-actions {
+    width: 100%;
+  }
+
+  .topbar-actions > .btn-primary {
+    margin-left: auto;
+  }
+}
+
+/* Page grids: let wide children (tables, charts) scroll instead of
+   stretching the page past the viewport. */
+.dashboard,
+.analytics,
+.manage,
+.detail {
+  grid-template-columns: minmax(0, 1fr);
+}

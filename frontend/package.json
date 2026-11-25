@@ -1,0 +1,23 @@
+{
+  "name": "realtime-metrics-dashboard-frontend",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "React dashboard for the Realtime Metrics Dashboard API",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.11",
+    "vite": "^8.3.8"
+  },
+  "dependencies": {
+    "lucide-vue-next": "^1.0.0",
+    "pinia": "^4.1.0",
+    "vue": "^3.5.46",
+    "vue-router": "^5.5.1",
+    "vue-sonner": "^2.0.9"
+  }
+}
