@@ -2,146 +2,162 @@
 ### Sri Krishna College of Engineering and Technology (SKCET) — Team 7
 
 **Tech Stack**:
-- **Frontend**: Vue.js (Vue 3 Composition API, Pinia, Vue Router) *(Planned)*
-- **Backend**: Node.js & Express.js *(Implemented & Live)*
+- **Frontend**: Vue.js 3 (Composition API), Pinia, Vue Router, Vite
+- **Backend**: Node.js, Express.js, `express-validator`, CORS
 
 ---
 
 ## 1. Project Title & Overview
 
-The **Interactive Dashboard with Real-Time Updates and API Request Validation** is a full-stack web application designed to monitor live operational metrics across sales, traffic, system performance, and revenue streams. The system pairs a high-performance Node.js and Express REST backend with an interactive Vue.js frontend to stream real-time updates, enforce strict input validation, and display live analytics. The backend service provides persistent in-memory data storage, category-based query filtering, and standardized error handling so client applications can seamlessly read and mutate metrics.
+The **Interactive Dashboard with Real-Time Updates and API Request Validation** is a full-stack production application built to eliminate stale operational visibility and prevent data corruption in analytics pipelines. Traditional monitoring dashboards often suffer from manual refresh latency and unvalidated client writes that corrupt reporting datasets. This project solves both challenges by delivering an automated, live operational monitoring system across four key enterprise domains: **Sales, Traffic, System, and Revenue**. The system enforces resilient, two-layer request validation—intercepting invalid inputs directly in the Vue 3 browser layer and validating all mutations on the Express.js server before changes touch the data store.
 
 ---
 
-## 2. Complete Monorepo Folder Structure & Workflow
+## 2. System Architecture & Monorepo Structure
 
-### Folder Tree
+The repository is organized as a clean, decoupled monorepo housing the backend REST API service and the modern Vue 3 single-page application (SPA):
 
 ```
 Realtime-Metrics-Dashboard/
-├── README.md                            # Main project overview, architecture, ownership, and work distribution
-├── backend/                             # [COMPLETED] Node.js + Express REST API service
-│   ├── package.json                     # Backend manifest, scripts (start, dev), and dependencies
-│   ├── server.js                        # Server entry point, port binding (5000), and process lifecycle handlers
-│   ├── README.md                        # In-depth backend API reference, schemas, and live demo test cases
+├── README.md                            # Comprehensive project overview, architecture, workflow, and run guide
+├── PRODUCT.md                           # Product requirements, personas, and acceptance criteria
+├── .gitignore                           # Git ignore rules (node_modules, logs, OS files)
+│
+├── backend/                             # Express.js REST API Service (Port 5000)
+│   ├── package.json                     # Backend dependencies (express, cors, express-validator, nodemon)
+│   ├── server.js                        # Server entry point, port binding, and process lifecycle handlers
+│   ├── README.md                        # In-depth backend API reference, schemas, and live demo curl commands
 │   └── src/
-│       ├── app.js                       # Express application setup, CORS, JSON parsing, and middleware pipeline
+│       ├── app.js                       # Express app configuration, CORS, JSON body parser, and route mounts
 │       ├── controllers/
-│       │   └── dashboard.controller.js  # CRUD controller logic and in-memory metrics state
+│       │   └── dashboard.controller.js  # CRUD controller logic and in-memory dashboard metric store
 │       ├── middlewares/
 │       │   ├── error.middleware.js      # Custom AppError class and centralized global error handling
-│       │   └── validate.middleware.js   # express-validator interceptor returning standardized HTTP 400 errors
+│       │   └── validate.middleware.js   # express-validator result formatter returning 400 Bad Request
 │       ├── routes/
-│       │   └── dashboard.routes.js      # REST API route definitions (/api/v1/dashboard/metrics)
+│       │   └── dashboard.routes.js      # REST API route declarations (/api/v1/dashboard/metrics)
 │       └── validators/
-│           └── dashboard.validator.js   # Schema validation rules for request bodies, params, and queries
-└── frontend/                            # [PLANNED] Vue.js client application workspace (Vite + Vue 3)
+│           └── dashboard.validator.js   # Declarative validation rules for bodies, route params, and queries
+│
+└── frontend/                            # Vue 3 Single-Page Application (Port 5173 via Vite)
+    ├── package.json                     # Frontend dependencies (vue, pinia, vue-router, lucide-vue-next, vite)
+    ├── vite.config.js                   # Vite configuration with reverse proxy (/api & /health -> localhost:5000)
+    ├── index.html                       # HTML entry point with metadata and favicon
+    ├── README.md                        # Frontend documentation, feature guides, and demo scripts
+    └── src/
+        ├── App.vue                      # Root Vue component with top-level navigation layout and drawer
+        ├── main.js                      # Application bootstrap mounting Pinia store and Vue Router
+        ├── api/
+        │   └── client.js                # Centralized Fetch API client with standardized error handling
+        ├── stores/
+        │   ├── metrics.js               # Pinia store managing live polling, history series, and API calls
+        │   └── editor.js                # Pinia store for create/edit modal drawer state
+        ├── router/
+        │   └── index.js                 # Vue Router configuration (/dashboard, /analytics, /manage, /metrics/:id)
+        ├── views/
+        │   ├── DashboardView.vue        # Main dashboard grid with status cards, category tabs, and live feed
+        │   ├── AnalyticsView.vue        # Live trend chart, session stats, and category distribution breakdown
+        │   ├── ManageView.vue           # Sortable, filterable metrics data table with CRUD actions
+        │   ├── MetricDetailView.vue     # Dynamic single-metric drilldown view with dedicated trend graph
+        │   └── NotFoundView.vue         # 404 catch-all view with back-to-dashboard navigation
+        ├── components/                  # Reusable UI widgets (MetricCard, SparkLine, TrendChart, MetricDrawer, etc.)
+        ├── composables/                 # Composition functions (useMetricForm for validation, useNow for clocks)
+        └── styles/                      # CSS design tokens, responsive layout styles, and theme variables
 ```
+
+### Team Ownership & Contributions
+- **Backend Architecture & REST API (Suwetha E)**: Independently designed, implemented, and verified the entire Node.js + Express backend module (`server.js`, `app.js`, `routes/`, `controllers/`, `validators/`, `middlewares/`), including strict schema validation chains, centralized error handling, and in-memory state persistence.
+- **Frontend SPA & Reactive Store**: Built the Vue 3 Composition API frontend, Pinia state management with live interval polling, dynamic SVG sparklines/trend charts, client-side validation composables, and seamless reverse-proxy integration.
 
 ---
 
-### End-to-End Request Workflow
+## 3. End-to-End Application & Data Workflow
 
 ```mermaid
 flowchart LR
-    A["1. Client / UI\n(Vue.js / Postman)"] -->|"HTTP Request\n(GET / POST / PUT / DELETE)"| B["2. Express Router\n(/api/v1/dashboard/metrics)"]
-    B -->|"Validate Payload & Params"| C["3. Validation Middleware\n(express-validator)"]
-    C -->|"Invalid Input"| E["HTTP 400 Bad Request\n{ success: false, errors: [...] }"]
-    C -->|"Valid Input"| D["4. Dashboard Controller\n& In-Memory Store"]
+    A["1. Vue 3 Client & Pinia\n(localhost:5173)\n• 2s/5s/10s Polling\n• Client-Side Validation"] -->|"HTTP Request\n(GET / POST / PUT / DELETE)"| B["2. Vite Dev Proxy\n& Express Router\n(/api/v1/dashboard/metrics)"]
+    B -->|"Validate Schema & Parameters"| C["3. Server Validation\n(express-validator)"]
+    C -->|"Validation Error"| E["HTTP 400 Bad Request\n{ success: false, errors: [...] }"]
+    C -->|"Valid Input"| D["4. Dashboard Controller\n& In-Memory Data Store"]
     D -->|"Success"| F["Standardized JSON Response\n(200 OK / 201 Created)"]
-    D -->|"Not Found / Error"| G["Global Error Middleware\n(404 Not Found / 500 Error)"]
+    D -->|"Resource Not Found"| G["Global Error Middleware\n(404 Not Found / 500 Error)"]
+    E -->|"Inline Field Errors"| A
+    F -->|"Reactive State Update"| A
+    G -->|"Toast / Error Banner"| A
 ```
 
-1. **Client / UI (`Vue.js / Postman`)**: The client application issues an HTTP request to the REST API with query parameters or JSON payloads.
-2. **Express Router (`/api/v1/dashboard`)**: Express routes the request through global middleware (`cors`, `express.json`) to the targeted dashboard route.
-3. **Validation Middleware (`express-validator`)**: Incoming body attributes and route parameters are checked against strict schema constraints. Invalid inputs immediately halt execution and return field-level `400 Bad Request` messages.
-4. **Controller & Standardized JSON Response**: The controller performs the requested CRUD operation on the metric store and returns a uniform JSON payload (`200 OK`, `201 Created`, or passes errors to the `404`/`500` error handler).
+### 4-Step End-to-End Walkthrough:
+1. **Vue 3 UI & Pinia Polling (`localhost:5173`)**: The client application automatically polls the backend every `2s` (with configurable `5s`/`10s` options and a live simulator toggle). When a user submits an Add or Edit form, `useMetricForm` runs client-side checks first to give instant feedback before sending the payload.
+2. **Vite Dev Proxy & Express Router (`/api/v1/dashboard`)**: Vite proxies all browser calls from `/api` and `/health` directly to `http://localhost:5000`, eliminating cross-origin CORS hurdles during development and providing unified routing.
+3. **Server-Side Request Validation (`express-validator`)**: The backend enforces strict data contracts:
+   - `title`: required, trimmed string, 3–50 characters.
+   - `value`: required, valid numeric value.
+   - `category`: required, strictly constrained to `['SALES', 'TRAFFIC', 'SYSTEM', 'REVENUE']`.
+   - `status`: optional, strictly constrained to `['ACTIVE', 'WARNING', 'CRITICAL']`.
+   - `:id`: route parameter must be a positive integer.
+4. **Controller & Standardized JSON Responses**: Valid operations update the in-memory metric store and return `200 OK` or `201 Created`. Validation failures immediately short-circuit to return structured `400 Bad Request` field-level errors (`errors: [{ field, issue }]`), which the UI maps directly next to the corresponding form inputs.
 
 ---
 
-## 3. Completed Work & Ownership (Suwetha E — Backend Module)
+## 4. How to Run Locally (Full-Stack Setup)
 
-> **Backend Engineer**: **Suwetha E**  
-> **Ownership Scope**: Initiated the repository setup and independently designed, implemented, and thoroughly tested the entire Node.js + Express backend module (`backend/`).
+Running the entire full-stack application requires two terminal windows:
 
-### Completed Deliverables:
-- **Express Routing & Modular Architecture**: Structured a decoupled, maintainable project layout separating concerns into `server.js`, `app.js`, `routes/`, `controllers/`, `validators/`, and `middlewares/`.
-- **REST API Endpoint Design**: Built complete CRUD operations (`GET`, `POST`, `PUT`, `DELETE`) with dynamic category query filtering (`/api/v1/dashboard/metrics?category=...`).
-- **Request Validation & Error Handling**: Configured strict `express-validator` rules enforcing:
-  - `title`: required, trimmed, 3–50 characters.
-  - `value`: required, valid numeric value.
-  - `category`: required, constrained to `['SALES', 'TRAFFIC', 'SYSTEM', 'REVENUE']`.
-  - `status`: optional, constrained to `['ACTIVE', 'WARNING', 'CRITICAL']`.
-  - `:id`: positive integer parameter validation.
-  - Built `validate.middleware.js` and `error.middleware.js` returning structured JSON error payloads.
-- **API Contract & Ready-to-Use Seed Data**: Enabled CORS for seamless client communication and pre-seeded realistic production metrics (`TRAFFIC`, `SYSTEM`, `REVENUE`) so frontend engineers can begin integration immediately without database configuration.
-
-For full technical specifications, schemas, and cURL commands, refer to the [Backend Documentation (backend/README.md)](file:///c:/virtusa_project1/Realtime-Metrics-Dashboard/backend/README.md).
-
----
-
-## 4. Remaining Work Split (Open Modules — Available for Teammates to Pick)
-
-The backend API is fully operational and serves as the data provider for the system. Teammates can self-select and claim any of the open frontend tracks listed below:
-
-| Track / Module | Scope & Key Deliverables | Recommended Tech | Owner / Status |
-| :--- | :--- | :--- | :--- |
-| **Module 1: Frontend Setup & Routing** | • Initialize `frontend/` using Vite + Vue 3 Composition API.<br>• Configure Vue Router with view routes (Dashboard, Analytics, Manage Metrics).<br>• Setup base Axios/Fetch service connected to `http://localhost:5000/api/v1/dashboard`. | Vue 3, Vite, Vue Router, Axios | `Open — Available to Claim` |
-| **Module 2: State Management & Real-Time Updates** | • Create Pinia store to manage global metrics state, loading indicators, and active filters.<br>• Implement auto-refresh/polling intervals to simulate live real-time metrics feed.<br>• Implement category filtering logic in store (`SALES`, `TRAFFIC`, `SYSTEM`, `REVENUE`). | Pinia, Vue 3 Composition API | `Open — Available to Claim` |
-| **Module 3: Dashboard UI & Interactive Views** | • Design and build responsive metric cards with trend indicators.<br>• Implement visual status badges (`ACTIVE`, `WARNING`, `CRITICAL`).<br>• Create summary statistic widgets, skeleton loaders, and empty-state placeholders. | Vue 3, CSS / Tailwind / Component Library | `Open — Available to Claim` |
-| **Module 4: Forms, Client-Side Validation & Error Display** | • Build modal/drawer forms for adding and editing metrics.<br>• Add client-side validation mirroring backend constraints.<br>• Parse and render backend `400 Bad Request` field-level errors (`errors: [{ field, issue }]`) next to form inputs. | Vue 3, Reactive Forms | `Open — Available to Claim` |
-| **Module 5: API Testing, Integration & Documentation** | • Export and verify Postman collection for the team.<br>• Conduct end-to-end integration tests connecting Vue.js views to Express endpoints.<br>• Update root README with frontend setup guide and final deployment instructions. | Postman, Vitest / Cypress, Markdown | `Open — Available to Claim` |
-
----
-
-## 5. Quick Start Guide (Running the Backend Now)
-
-Any teammate or reviewer can clone the repository and start the live backend API in seconds:
-
-### 1. Terminal Commands
+### Terminal 1 — Start the Backend API (`localhost:5000`)
 ```bash
-# 1. Navigate to the backend folder
 cd backend
-
-# 2. Install all required dependencies
 npm install
-
-# 3. Launch the development server with auto-reload (nodemon)
 npm run dev
 ```
-
-The server will initialize on port `5000`:
-```
-===============================================
- Metrics Dashboard Backend API Server Running  
- URL: http://localhost:5000                 
- Environment: development 
- Base Endpoint: /api/v1/dashboard/metrics      
-===============================================
-```
+*The backend server will start on port `5000` with auto-reload via `nodemon`.*
 
 ---
 
-### 2. Available API Endpoints Summary
+### Terminal 2 — Start the Frontend UI (`localhost:5173`)
+```bash
+cd frontend
+npm install
+npm run dev
+```
+*The Vite development server will start on port `5173` with Hot Module Replacement (HMR).*
 
-| Method | Endpoint | Description | Status Codes |
+---
+
+### Live Application URLs
+- **Interactive Dashboard UI**: [http://localhost:5173](http://localhost:5173)
+- **Backend API Base**: [http://localhost:5000/api/v1/dashboard/metrics](http://localhost:5000/api/v1/dashboard/metrics)
+- **Backend Health Check**: [http://localhost:5000/health](http://localhost:5000/health)
+
+---
+
+## 5. API Endpoints & Validation Examples
+
+### REST Endpoints Summary
+
+| Method | Endpoint | Purpose | Status Codes |
 | :--- | :--- | :--- | :--- |
-| `GET` | `/health` | API operational uptime check | `200 OK` |
-| `GET` | `/api/v1/dashboard/metrics` | Retrieve all metrics (supports `?category=...`) | `200 OK`, `400 Bad Request` |
-| `GET` | `/api/v1/dashboard/metrics/:id` | Retrieve single metric by positive integer ID | `200 OK`, `400 Bad Request`, `404 Not Found` |
+| `GET` | `/health` | API operational uptime and status check | `200 OK` |
+| `GET` | `/api/v1/dashboard/metrics` | Retrieve all metrics (supports `?category=...` filter) | `200 OK`, `400 Bad Request` |
+| `GET` | `/api/v1/dashboard/metrics/:id` | Fetch metric details by positive integer ID | `200 OK`, `400 Bad Request`, `404 Not Found` |
 | `POST` | `/api/v1/dashboard/metrics` | Create a new real-time dashboard metric | `201 Created`, `400 Bad Request` |
-| `PUT` | `/api/v1/dashboard/metrics/:id` | Update an existing metric by ID | `200 OK`, `400 Bad Request`, `404 Not Found` |
+| `PUT` | `/api/v1/dashboard/metrics/:id` | Update an existing metric and refresh timestamp | `200 OK`, `400 Bad Request`, `404 Not Found` |
 | `DELETE` | `/api/v1/dashboard/metrics/:id` | Delete a metric from the store | `200 OK`, `400 Bad Request`, `404 Not Found` |
 
 ---
 
-### 3. Sample JSON Payloads
+### Request & Response Examples
 
-#### Fetch Metrics (`GET /api/v1/dashboard/metrics`) — `200 OK`
+#### 1. Fetching Metrics with Category Filter (`200 OK`)
+**Request**:
+```http
+GET /api/v1/dashboard/metrics?category=TRAFFIC HTTP/1.1
+Host: localhost:5000
+```
+**Response**:
 ```json
 {
   "success": true,
-  "count": 3,
+  "count": 1,
   "data": [
     {
       "id": 1,
@@ -150,30 +166,20 @@ The server will initialize on port `5000`:
       "category": "TRAFFIC",
       "status": "ACTIVE",
       "updatedAt": "2026-03-30T10:00:00.000Z"
-    },
-    {
-      "id": 2,
-      "title": "Server CPU Utilization",
-      "value": 78.5,
-      "category": "SYSTEM",
-      "status": "WARNING",
-      "updatedAt": "2026-03-30T10:05:00.000Z"
-    },
-    {
-      "id": 3,
-      "title": "Monthly Recurring Revenue",
-      "value": 94250.0,
-      "category": "REVENUE",
-      "status": "ACTIVE",
-      "updatedAt": "2026-03-30T10:10:00.000Z"
     }
   ]
 }
 ```
 
-#### Create Metric (`POST /api/v1/dashboard/metrics`) — `201 Created`
-**Request Payload**:
-```json
+---
+
+#### 2. Creating a Valid Metric (`201 Created`)
+**Request**:
+```http
+POST /api/v1/dashboard/metrics HTTP/1.1
+Host: localhost:5000
+Content-Type: application/json
+
 {
   "title": "Checkout Conversion Rate",
   "value": 3.42,
@@ -192,14 +198,20 @@ The server will initialize on port `5000`:
     "value": 3.42,
     "category": "SALES",
     "status": "ACTIVE",
-    "updatedAt": "2026-11-18T07:23:12.091Z"
+    "updatedAt": "2026-11-26T16:19:53.146Z"
   }
 }
 ```
 
-#### Trigger Validation Failure (`POST /api/v1/dashboard/metrics`) — `400 Bad Request`
-**Request Payload**:
-```json
+---
+
+#### 3. Intercepting Invalid Input (`400 Bad Request`)
+**Request**:
+```http
+POST /api/v1/dashboard/metrics HTTP/1.1
+Host: localhost:5000
+Content-Type: application/json
+
 {
   "title": "X",
   "value": "invalid_num",
@@ -212,9 +224,19 @@ The server will initialize on port `5000`:
   "success": false,
   "message": "Validation failed",
   "errors": [
-    { "field": "title", "issue": "Title must be between 3 and 50 characters" },
-    { "field": "value", "issue": "Value must be a valid numeric value" },
-    { "field": "category", "issue": "Category must be one of: SALES, TRAFFIC, SYSTEM, REVENUE" }
+    {
+      "field": "title",
+      "issue": "Title must be between 3 and 50 characters"
+    },
+    {
+      "field": "value",
+      "issue": "Value must be a valid numeric value"
+    },
+    {
+      "field": "category",
+      "issue": "Category must be one of: SALES, TRAFFIC, SYSTEM, REVENUE"
+    }
   ]
 }
 ```
+*(The Vue 3 frontend intercepts these field-level errors and displays them directly under the corresponding form inputs in the UI).*
