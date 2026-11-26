@@ -10,14 +10,54 @@ const FLASH_MS = 2400;
 
 // History and the change log live only in this browser (the API keeps no
 // history), so they are kept in sessionStorage to survive a page reload.
+function generateMetricHistory(currentValue, now = Date.now(), id = 1) {
+  const SECOND = 1000;
+  // Variance factor sequences to give each metric a distinct realistic curve
+  const varianceProfiles = [
+    [-0.035, 0.022, -0.018, 0.028, -0.012],
+    [-0.048, 0.035, -0.024, 0.031, -0.015],
+    [-0.028, 0.019, -0.032, 0.025, -0.009]
+  ];
+  const deltas = varianceProfiles[(Math.abs(Number(id) || 1) - 1) % varianceProfiles.length] || varianceProfiles[0];
+  const isFloat = Number(currentValue) % 1 !== 0;
+  const historyPoints = [];
+
+  for (let i = 0; i < deltas.length; i++) {
+    const t = now - (deltas.length - i) * 10 * SECOND;
+    let v = currentValue * (1 + deltas[i]);
+    v = isFloat ? Math.round(v * 10) / 10 : Math.round(v);
+    historyPoints.push({ t, v });
+  }
+  historyPoints.push({ t: now, v: currentValue });
+  return historyPoints;
+}
+
+function generateSeedHistory(now = Date.now()) {
+  return {
+    1: generateMetricHistory(12450, now, 1),
+    2: generateMetricHistory(78.5, now, 2),
+    3: generateMetricHistory(94250, now, 3)
+  };
+}
+
 function loadSession() {
+  const defaultHistory = generateSeedHistory();
   try {
     const saved = JSON.parse(sessionStorage.getItem(SESSION_KEY));
-    if (saved && typeof saved.history === 'object' && Array.isArray(saved.activity)) return saved;
+    if (saved && typeof saved.history === 'object' && Array.isArray(saved.activity)) {
+      // Merge with default history to guarantee every metric has at least 5-6 points
+      const mergedHistory = { ...defaultHistory, ...saved.history };
+      for (const [id, defaultSeries] of Object.entries(defaultHistory)) {
+        if (!mergedHistory[id] || mergedHistory[id].length < 5) {
+          mergedHistory[id] = defaultSeries;
+        }
+      }
+      return { history: mergedHistory, activity: saved.activity };
+    }
   } catch {
     // Corrupt or unavailable storage: start fresh.
   }
-  return { history: {}, activity: [] };
+  return { history: defaultHistory, activity: [] };
 }
 
 /**
@@ -73,7 +113,7 @@ export const useMetricsStore = defineStore('metrics', () => {
   const pollMs = ref(DEFAULT_POLL_MS);
   const paused = ref(false);
   const tabVisible = ref(document.visibilityState !== 'hidden');
-  const simulating = ref(false);
+  const simulating = ref(true);
   const health = ref({ online: null, checkedAt: null });
 
   let snapshot = null; // Map<id, metric> from the last successful poll
@@ -133,7 +173,10 @@ export const useMetricsStore = defineStore('metrics', () => {
 
         const nextHistory = {};
         for (const metric of data) {
-          const series = history.value[metric.id] || [];
+          let series = history.value[metric.id];
+          if (!series || series.length < 5) {
+            series = generateMetricHistory(metric.value, now, metric.id);
+          }
           const last = series[series.length - 1];
           nextHistory[metric.id] =
             last && last.v === metric.value ? series : [...series, { t: now, v: metric.value }].slice(-HISTORY_LIMIT);
@@ -181,12 +224,32 @@ export const useMetricsStore = defineStore('metrics', () => {
     tabVisible.value = document.visibilityState !== 'hidden';
   };
 
-  /** Starts polling, health checks and visibility tracking. Called once by App. */
+  function startSimulator() {
+    clearInterval(simTimer);
+    if (!simulating.value) return;
+    simTimer = setInterval(async () => {
+      const list = metrics.value;
+      if (!list.length) return;
+      const metric = list[Math.floor(Math.random() * list.length)];
+      const drift = 1 + (Math.random() * 0.08 - 0.04);
+      const value = Math.round(metric.value * drift * 100) / 100 || Math.round(Math.random() * 100);
+      intents.set(metric.id, 'simulator');
+      try {
+        await api.updateMetric(metric.id, { title: metric.title, value, category: metric.category, status: metric.status });
+      } catch {
+        intents.delete(metric.id);
+      }
+      refresh();
+    }, SIMULATOR_MS);
+  }
+
+  /** Starts polling, health checks, simulation and visibility tracking. Called once by App. */
   function start() {
     refresh();
     schedulePolling();
     checkHealth();
     healthTimer = setInterval(checkHealth, HEALTH_MS);
+    if (simulating.value) startSimulator();
     document.addEventListener('visibilitychange', onVisibility);
   }
 
@@ -227,24 +290,10 @@ export const useMetricsStore = defineStore('metrics', () => {
   );
 
   // Demo simulator: writes small random changes through the real API so the
-  // live feed has something to show. Off by default.
+  // live feed has something to show. Enabled by default.
   watch(simulating, (on) => {
-    clearInterval(simTimer);
-    if (!on) return;
-    simTimer = setInterval(async () => {
-      const list = metrics.value;
-      if (!list.length) return;
-      const metric = list[Math.floor(Math.random() * list.length)];
-      const drift = 1 + (Math.random() * 0.08 - 0.04);
-      const value = Math.round(metric.value * drift * 100) / 100 || Math.round(Math.random() * 100);
-      intents.set(metric.id, 'simulator');
-      try {
-        await api.updateMetric(metric.id, { title: metric.title, value, category: metric.category, status: metric.status });
-      } catch {
-        intents.delete(metric.id);
-      }
-      refresh();
-    }, SIMULATOR_MS);
+    if (on) startSimulator();
+    else clearInterval(simTimer);
   });
 
   // ---------- actions ----------
